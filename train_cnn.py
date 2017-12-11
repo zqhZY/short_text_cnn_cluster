@@ -108,28 +108,32 @@ pretrained_embedding_layer = Embedding(
 sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
 embedded_sequences = pretrained_embedding_layer(sequence_input)
 
-# 1st Layer
-x = Conv1D(100, 5, activation='tanh', padding='same')(embedded_sequences)
-x = GlobalMaxPooling1D()(x)
 
-# Output
-x = Dropout(0.5)(x)
-predictions = Dense(TARGET_DIM, activation='sigmoid')(x)
-model = Model(sequence_input, predictions)
+def get_model():
+    # 1st Layer
+    x = Conv1D(100, 5, activation='tanh', padding='same')(embedded_sequences)
+    x = GlobalMaxPooling1D()(x)
 
-# Fine-tune embeddings or not
-model.layers[1].trainable=trainable_embedding
+    # Output
+    x = Dropout(0.5)(x)
+    predictions = Dense(TARGET_DIM, activation='sigmoid')(x)
+    model = Model(sequence_input, predictions)
 
-checkpoint = ModelCheckpoint('models/weights.{epoch:03d}-{val_acc:.4f}.hdf5', monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
-adam = Adam(lr=1e-3, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
-# Loss and Optimizer
-model.compile(loss='binary_crossentropy',
-              optimizer=adam,
-              metrics=['mae'])
+    # Fine-tune embeddings or not
+    model.layers[1].trainable=trainable_embedding
 
-model.summary()
+    checkpoint = ModelCheckpoint('models/weights.{epoch:03d}-{val_acc:.4f}.hdf5', monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+    adam = Adam(lr=1e-3, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+    # Loss and Optimizer
+    model.compile(loss='binary_crossentropy',
+                  optimizer=adam,
+                  metrics=['mae'])
+
+    model.summary()
+    return model
 
 nb_epoch = 50
+model = get_model()
 model.fit(X, B, validation_split=0.2,
           epochs=nb_epoch, batch_size=100, verbose=2, shuffle=True, callbacks=[checkpoint])
 
